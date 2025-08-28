@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>A-Z Packers & Movers — Fuel Log</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#141a23; --muted:#9fb0c8; --text:#eef3fb;
+    --accent:#70e1a3; --accent2:#7aa2ff; --danger:#ff6b6b; --border:#233046;
+  }
+  *{box-sizing:border-box} body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    color:var(--text); background:linear-gradient(180deg,#0b1220,#0c0f14 30%,#0c0f14);
+  }
+  header{padding:16px 14px 8px; border-bottom:1px solid var(--border); position:sticky; top:0; background:rgba(12,15,20,.9); backdrop-filter:blur(6px)}
+  h1{margin:0; font-size:18px; letter-spacing:.3px}
+  .wrap{max-width:980px; margin:18px auto; padding:0 12px}
+  .grid{display:grid; gap:12px}
+  @media (min-width:780px){ .cols-2{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:repeat(3,1fr)} }
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px}
+  label{display:block; font-size:12px; color:var(--muted); margin:0 0 6px}
+  input,select,button,textarea{
+    font:inherit; color:var(--text); background:#0f1520; border:1px solid #22324a; border-radius:10px; padding:10px 12px; width:100%;
+  }
+  input::placeholder{color:#6f85a7}
+  .row{display:flex; gap:8px; align-items:center}
+  .btn{cursor:pointer; user-select:none}
+  .btn-olive{background:#0f2f22; border-color:#1a644a}
+  .btn-olive:hover{background:#13412f}
+  .btn-blue{background:#0f1e3a; border-color:#2b64ff}
+  .btn-blue:hover{background:#10244a}
+  .btn-red{background:#2a1010; border-color:#8b3030}
+  .btn-red:hover{background:#3a1414}
+  .btn-ghost{background:transparent}
+  .tiny{padding:6px 8px; font-size:12px}
+  .muted{color:var(--muted); font-size:12px}
+  .pill{display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#0f1520}
+  table{width:100%; border-collapse:collapse; margin-top:8px; font-size:14px}
+  th,td{border-bottom:1px solid var(--border); padding:10px 8px; text-align:left}
+  th{color:#bcd0ef; font-weight:600; position:sticky; top:56px; background:var(--panel)}
+  .right{text-align:right}
+  .controls{display:flex; gap:8px; flex-wrap:wrap}
+  .spacer{height:6px}
+  .banner{padding:8px 10px; border:1px dashed var(--border); border-radius:10px; background:#0e1624; color:#cfe6ff}
+  .ok{color:#86efac}
+  .warn{color:#fcd34d}
+  .danger{color:#fda4af}
+
+  /* Modal */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:20}
+  .modal{width:min(680px,92vw); background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px}
+  .modal .x{float:right; background:transparent; border:0; color:var(--muted); font-size:22px; cursor:pointer}
+
+  .toast{position:fixed; bottom:16px; right:16px; background:#0f1c2c; border:1px solid #294163; color:#e4f1ff; padding:10px 12px; border-radius:10px; display:none; z-index:30}
+</style>
+</head>
+<body>
+  <header>
+    <h1>A-Z Packers & Movers — Fuel Consumption & Cost</h1>
+    <div class="muted">Per-vehicle log with admin-only initial meter override (PIN stored on this device).</div>
+  </header>
+
+  <div class="wrap grid cols-2">
+    <!-- Vehicle / Admin -->
+    <section class="card">
+      <h3 style="margin:0 0 10px">Vehicle & Settings</h3>
+      <div class="grid cols-2">
+        <div>
+          <label>Vehicle Number</label>
+          <div class="row">
+            <select id="vehicleSel"></select>
+            <button id="addVehicle" class="btn btn-olive tiny" title="Add new vehicle">+ Add</button>
+            <button id="adminBtn" class="btn tiny" style="background:#0e0e14;border-color:#3b3b59" title="Admin tools">Admin</button>
+          </div>
+        </div>
+        <div>
+          <label>Diesel Price (₹/L)</label>
+          <input id="price" type="number" inputmode="decimal" step="0.01" value="93" />
+        </div>
+        <div>
+          <label>Mileage (km/L)</label>
+          <input id="mileage" type="number" inputmode="decimal" step="0.01" value="8" />
+        </div>
+        <div>
+          <label>Initial Meter (display)</label>
+          <input id="initialMeterDisplay" type="text" disabled />
+        </div>
+        <div>
+          <label>Start KM (auto-lock)</label>
+          <input id="startKm" type="number" inputmode="decimal" step="0.1" placeholder="Start reading" />
+        </div>
+        <div>
+          <label>End KM</label>
+          <input id="endKm" type="number" inputmode="decimal" step="0.1" placeholder="End reading" />
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="controls">
+        <button id="calcBtn" class="btn btn-olive">Calculate & Save</button>
+        <button id="clearInputs" class="btn btn-ghost">Clear</button>
+      </div>
+
+      <div id="resultStrip" class="banner" style="margin-top:12px; display:none"></div>
+      <div class="muted" style="margin-top:8px">
+        Start is prefilled from the last trip’s end (start-lock). Admin can correct initial/start for this device.
+      </div>
+    </section>
+
+    <!-- Quick Summary -->
+    <section class="card">
+      <h3 style="margin:0 0 10px">Totals (Selected Vehicle)</h3>
+      <div class="grid cols-3">
+        <div class="banner"><div class="muted">Trips</div><div id="sumTrips" style="font-weight:700;font-size:20px">0</div></div>
+        <div class="banner"><div class="muted">Distance (km)</div><div id="sumKm" style="font-weight:700;font-size:20px">0</div></div>
+        <div class="banner"><div class="muted">Fuel (L)</div><div id="sumL" style="font-weight:700;font-size:20px">0</div></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:10px">
+        <div class="banner"><div class="muted">Cost (₹)</div><div id="sumCost" style="font-weight:700;font-size:20px">0</div></div>
+        <div class="banner"><div class="muted">Avg km/L</div><div id="sumAvg" style="font-weight:700;font-size:20px">0</div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Log -->
+  <div class="wrap card">
+    <h3 style="margin:0 0 10px">Stored Records (this device)</h3>
+    <div class="controls" style="margin-bottom:8px">
+      <button id="exportBtn" class="btn btn-blue tiny">Export CSV</button>
+      <button id="wipeBtn" class="btn btn-red tiny">Delete All Vehicle Records</button>
+    </div>
+    <div style="overflow:auto; max-height:55vh">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Date/Time</th>
+            <th>Vehicle</th>
+            <th class="right">Start</th>
+            <th class="right">End</th>
+            <th class="right">Km</th>
+            <th class="right">km/L</th>
+            <th class="right">L</th>
+            <th class="right">₹/L</th>
+            <th class="right">₹</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ADMIN MODAL -->
+  <div id="adminModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal">
+      <button class="x" id="adminClose" aria-label="Close">×</button>
+      <h3 id="adminTitle" style="margin:0 0 8px">Admin — Initial Meter Override</h3>
+      <div class="muted" style="margin-bottom:10px">
+        Protected with a local PIN on <b>this device</b>. Use to correct wrong initial readings for the selected vehicle.
+      </div>
+
+      <div id="adminStepPin">
+        <label for="adminPin"><b>Enter Admin PIN</b> (first time: set a new PIN)</label>
+        <input id="adminPin" type="password" inputmode="numeric" placeholder="4–8 digit PIN" />
+        <div class="controls" style="margin-top:10px">
+          <button class="btn btn-olive" id="adminPinOk">Continue</button>
+        </div>
+      </div>
+
+      <div id="adminStepTool" style="display:none">
+        <div class="banner">Vehicle: <b><span id="adminVeh"></span></b></div>
+        <div class="grid cols-2" style="margin-top:10px">
+          <div>
+            <label>Current Initial Meter</label>
+            <input id="adminCurInit" type="text" disabled />
+          </div>
+          <div>
+            <label>Current Start Lock (next start)</label>
+            <input id="adminCurLock" type="text" disabled />
+          </div>
+          <div>
+            <label for="adminNewInit">New Initial Meter (override)</label>
+            <input id="adminNewInit" type="number" inputmode="decimal" step="0.1" placeholder="e.g., 78522.0" />
+          </div>
+          <div style="display:flex; align-items:end">
+            <label style="display:flex; gap:8px; align-items:center">
+              <input id="adminResetCarry" type="checkbox" />
+              Reset Carry-Forward to ₹0
+            </label>
+          </div>
+        </div>
+        <div class="controls" style="margin-top:12px">
+          <button class="btn btn-red" id="adminApply">Save Override</button>
+          <button class="btn btn-ghost" id="adminCancel">Cancel</button>
+        </div>
+        <div class="muted" style="margin-top:8px">
+          This sets both the one-time <b>Initial</b> and the <b>Start Lock</b> to your new value so future entries begin from it.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Storage Keys & Helpers ----------
+  const STORAGE_PREFIX = 'az_fuel_';
+  const KEY_VEH_LIST = STORAGE_PREFIX + 'veh_list';           // JSON array
+  const KEY_RECORDS  = (v)=> STORAGE_PREFIX + 'rec_' + v;     // JSON array
+  const KEY_INITIAL  = (v)=> STORAGE_PREFIX + 'initial_' + v; // string number
+  const KEY_LOCK     = (v)=> STORAGE_PREFIX + 'lock_' + v;    // string number
+  const KEY_CARRY    = (v)=> STORAGE_PREFIX + 'carry_' + v;   // string number (optional)
+  const KEY_ADMIN_PIN= STORAGE_PREFIX + 'admin_pin';          // string
+
+  const $ = (id)=> document.getElementById(id);
+  const vehicleSel = $('vehicleSel');
+  const priceEl = $('price');
+  const mileageEl = $('mileage');
+  const initialMeterDisplay = $('initialMeterDisplay');
+  const startKmEl = $('startKm');
+  const endKmEl = $('endKm');
+  const calcBtn = $('calcBtn');
+  const clearInputs = $('clearInputs');
+
+  const logBody = $('logBody');
+  const sumTrips = $('sumTrips');
+  const sumKm = $('sumKm');
+  const sumL = $('sumL');
+  const sumCost = $('sumCost');
+  const sumAvg = $('sumAvg');
+
+  const adminBtn = $('adminBtn');
+  const adminModal = $('adminModal');
+  const adminClose = $('adminClose');
+  const adminPinOk = $('adminPinOk');
+  const adminCancel = $('adminCancel');
+  const adminApply = $('adminApply');
+  const adminStepPin = $('adminStepPin');
+  const adminStepTool = $('adminStepTool');
+  const adminPin = $('adminPin');
+  const adminVeh = $('adminVeh');
+  const adminCurInit = $('adminCurInit');
+  const adminCurLock = $('adminCurLock');
+  const adminNewInit = $('adminNewInit');
+  const adminResetCarry = $('adminResetCarry');
+
+  const exportBtn = $('exportBtn');
+  const wipeBtn = $('wipeBtn');
+  const addVehicleBtn = $('addVehicle');
+  const resultStrip = $('resultStrip');
+  const toast = $('toast');
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.style.display = 'block';
+    setTimeout(()=> toast.style.display='none', 1800);
+  }
+
+  function normalizeVeh(v){
+    return String(v || '').trim().toUpperCase();
+  }
+
+  function getVehList(){
+    try{
+      const raw = localStorage.getItem(KEY_VEH_LIST);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function setVehList(list){
+    localStorage.setItem(KEY_VEH_LIST, JSON.stringify(list));
+  }
+
+  function ensureVehOption(vno){
+    const list = getVehList();
+    if(!list.includes(vno)){
+      list.push(vno);
+      setVehList(list);
+      populateVehicleSelect(vno);
+    }
+  }
+
+  function populateVehicleSelect(selectV){
+    const list = getVehList();
+    vehicleSel.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = ''; opt0.textContent = '— Select Vehicle —';
+    vehicleSel.appendChild(opt0);
+    list.forEach(v=>{
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if(selectV && v===selectV) o.selected = true;
+      vehicleSel.appendChild(o);
+    });
+    refreshInitMeterUI();
+    refreshLockToStart();
+    renderRecords();
+  }
+
+  // ---------- Records ----------
+  function getRecords(vno){
+    try{
+      const raw = localStorage.getItem(KEY_RECORDS(vno));
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+  function setRecords(vno, arr){
+    localStorage.setItem(KEY_RECORDS(vno), JSON.stringify(arr));
+  }
+
+  function renderRecords(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    logBody.innerHTML = '';
+    let trips=0, km=0, L=0, cost=0;
+    if(!vno){ sumTrips.textContent='0'; sumKm.textContent='0'; sumL.textContent='0'; sumCost.textContent='0'; sumAvg.textContent='0'; return; }
+
+    const rows = getRecords(vno);
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.ts}</td>
+        <td>${r.v}</td>
+        <td class="right">${fmtNum(r.s)}</td>
+        <td class="right">${fmtNum(r.e)}</td>
+        <td class="right">${fmtNum(r.km)}</td>
+        <td class="right">${fmtNum(r.m)}</td>
+        <td class="right">${fmtNum(r.L)}</td>
+        <td class="right">${fmtNum(r.p)}</td>
+        <td class="right">${fmtNum(r.cost)}</td>
+      `;
+      logBody.appendChild(tr);
+      trips++; km += Number(r.km)||0; L += Number(r.L)||0; cost += Number(r.cost)||0;
+    });
+    sumTrips.textContent = trips;
+    sumKm.textContent = fmtNum(km);
+    sumL.textContent = fmtNum(L);
+    sumCost.textContent = fmtNum(cost);
+    sumAvg.textContent = L>0 ? fmtNum(km/L) : '0';
+  }
+
+  function fmtNum(n){
+    const v = Number(n);
+    if (Number.isInteger(v)) return v.toString();
+    return v.toFixed(2);
+  }
+
+  // ---------- Start Lock / Initial ----------
+  function refreshInitMeterUI(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ initialMeterDisplay.value=''; return; }
+    const init = localStorage.getItem(KEY_INITIAL(vno)) || '';
+    initialMeterDisplay.value = init;
+  }
+
+  function refreshLockToStart(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ startKmEl.value=''; return; }
+    const locked = localStorage.getItem(KEY_LOCK(vno));
+    startKmEl.value = locked ? locked : '';
+  }
+
+  function setNextStartLock(vno, nextStart){
+    localStorage.setItem(KEY_LOCK(vno), String(nextStart));
+  }
+
+  // ---------- Calculate & Save ----------
+  function calculateAndSave(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ alert('Please select a vehicle'); return; }
+
+    const s = Number(startKmEl.value);
+    const e = Number(endKmEl.value);
+    const m = Number(mileageEl.value);
+    const p = Number(priceEl.value);
+
+    if(!isFinite(s) || !isFinite(e) || e <= s){ alert('End KM must be greater than Start KM.'); return; }
+    if(!isFinite(m) || m <= 0){ alert('Enter a valid mileage (km/L).'); return; }
+    if(!isFinite(p) || p <= 0){ alert('Enter a valid price (₹/L).'); return; }
+
+    const km = e - s;
+    const L = km / m;
+    const cost = L * p;
+
+    // Persist record
+    const rec = getRecords(vno);
+    const ts = new Date().toLocaleString();
+    rec.push({ ts, v: vno, s, e, km, m, L, p, cost });
+    setRecords(vno, rec);
+
+    // Move next start lock to end reading
+    setNextStartLock(vno, e);
+
+    resultStrip.style.display='block';
+    resultStrip.innerHTML = `
+      ✅ Saved: <b>${vno}</b> — Distance <b>${fmtNum(km)} km</b>,
+      Fuel <b>${fmtNum(L)} L</b>, Cost <b>₹${fmtNum(cost)}</b>
+    `;
+    renderRecords();
+    showToast('Trip saved');
+
+    // Keep start as new lock, clear end
+    endKmEl.value = '';
+  }
+
+  // ---------- Export / Wipe ----------
+  function exportCSV(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ alert('Select a vehicle first'); return; }
+    const rows = getRecords(vno);
+    if(!rows.length){ alert('No records to export for this vehicle'); return; }
+    const header = ['Date/Time','Vehicle','Start','End','Km','Mileage(km/L)','Litres','₹/L','₹'];
+    const lines = [header.join(',')];
+    rows.forEach(r=>{
+      lines.push([r.ts,r.v,r.s,r.e,r.km,r.m,r.L,r.p,r.cost].join(','));
+    });
+    const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `fuel_log_${vno}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function wipeVehicleRecords(){
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ alert('Select a vehicle first'); return; }
+    if(!confirm(`Delete all records for ${vno}? This cannot be undone.`)) return;
+    localStorage.removeItem(KEY_RECORDS(vno));
+    renderRecords();
+    showToast('Records deleted for this vehicle');
+  }
+
+  // ---------- Admin Modal Flow ----------
+  function openAdminModal(){
+    adminPin.value = '';
+    adminStepPin.style.display = 'block';
+    adminStepTool.style.display = 'none';
+    adminModal.style.display = 'flex';
+    setTimeout(()=> adminPin.focus(), 50);
+  }
+  function closeAdminModal(){ adminModal.style.display='none'; }
+
+  adminBtn.addEventListener('click', ()=>{
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ alert('Select a vehicle first'); return; }
+    openAdminModal();
+  });
+  adminClose.addEventListener('click', closeAdminModal);
+  adminCancel.addEventListener('click', closeAdminModal);
+
+  adminPinOk.addEventListener('click', ()=>{
+    const pinStored = localStorage.getItem(KEY_ADMIN_PIN);
+    const pin = (adminPin.value||'').trim();
+    if(!pin || !/^\d{4,8}$/.test(pin)){ alert('Enter a 4–8 digit PIN'); return; }
+
+    if(!pinStored){
+      if(confirm('No Admin PIN set. Set this PIN now on this device?')){
+        localStorage.setItem(KEY_ADMIN_PIN, pin);
+        showToast('Admin PIN set');
+      }else{ return; }
+    }else if(pinStored !== pin){
+      alert('Wrong PIN'); return;
+    }
+
+    const vno = normalizeVeh(vehicleSel.value||'');
+    adminVeh.textContent = vno;
+    adminCurInit.value = localStorage.getItem(KEY_INITIAL(vno)) || '(not set)';
+    adminCurLock.value = localStorage.getItem(KEY_LOCK(vno)) || '(not set)';
+    adminNewInit.value = '';
+    adminResetCarry.checked = false;
+
+    adminStepPin.style.display = 'none';
+    adminStepTool.style.display = 'block';
+  });
+
+  adminApply.addEventListener('click', ()=>{
+    const vno = normalizeVeh(vehicleSel.value||'');
+    if(!vno){ alert('Select a vehicle first'); return; }
+    const newInitStr = String(adminNewInit.value||'').trim();
+    if(!/^\d+(\.\d+)?$/.test(newInitStr)){ alert('Enter a valid number'); return; }
+    if(!confirm(`Override initial meter for ${vno} to ${newInitStr}? This also sets Start-Lock to the same value.`)) return;
+
+    localStorage.setItem(KEY_INITIAL(vno), newInitStr);
+    localStorage.setItem(KEY_LOCK(vno), newInitStr);
+    if(adminResetCarry.checked){ localStorage.setItem(KEY_CARRY(vno), '0'); }
+
+    refreshInitMeterUI();
+    refreshLockToStart();
+    showToast('Initial & Start-Lock updated');
+    closeAdminModal();
+  });
+
+  // ---------- UI Events ----------
+  addVehicleBtn.addEventListener('click', ()=>{
+    const v = prompt('Enter vehicle number (e.g., OD 05 BD 8855):','OD 05 BD 8855');
+    const vno = normalizeVeh(v);
+    if(!vno) return;
+    ensureVehOption(vno);
+    localStorage.setItem(KEY_INITIAL(vno), ''); // no initial by default
+    localStorage.setItem(KEY_LOCK(vno), '');    // no lock yet
+    vehicleSel.value = vno;
+    refreshInitMeterUI();
+    refreshLockToStart();
+    renderRecords();
+  });
+
+  vehicleSel.addEventListener('change', ()=>{
+    refreshInitMeterUI();
+    refreshLockToStart();
+    renderRecords();
+  });
+
+  calcBtn.addEventListener('click', calculateAndSave);
+  clearInputs.addEventListener('click', ()=>{
+    endKmEl.value='';
+    showToast('Inputs cleared');
+  });
+
+  exportBtn.addEventListener('click', exportCSV);
+  wipeBtn.addEventListener('click', wipeVehicleRecords);
+
+  // ---------- Boot ----------
+  (function boot(){
+    // Seed one default vehicle if none
+    if(getVehList().length === 0){
+      setVehList(['OD 05 BD 8855']);
+    }
+    populateVehicleSelect('OD 05 BD 8855');
+  })();
+
+})();
+</script>
+</body>
+</html>
